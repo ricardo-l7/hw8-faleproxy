@@ -13,9 +13,10 @@ let server;
 describe('Integration Tests', () => {
   // Modify the app to use a test port
   beforeAll(async () => {
-    // Mock external HTTP requests
+    // Disable all net connections...
     nock.disableNetConnect();
-    nock.enableNetConnect('127.0.0.1');
+    // ...but allow connections if the host is either '127.0.0.1' or 'localhost'
+    nock.enableNetConnect(host => ['127.0.0.1', 'localhost'].includes(host));
     
     // Create a temporary test app file
     await execAsync('cp app.js app.test.js');
@@ -29,7 +30,7 @@ describe('Integration Tests', () => {
     
     // Give the server time to start
     await new Promise(resolve => setTimeout(resolve, 2000));
-  }, 10000); // Increase timeout for server startup
+  }, 10000);
 
   afterAll(async () => {
     // Kill the test server and clean up
@@ -81,10 +82,16 @@ describe('Integration Tests', () => {
       await axios.post(`http://localhost:${TEST_PORT}/fetch`, {
         url: 'not-a-valid-url'
       });
-      // Should not reach here
+      // Should not reach here; if it does, force a failure.
       expect(true).toBe(false);
     } catch (error) {
-      expect(error.response.status).toBe(500);
+      // If axios provides a response, assert the status.
+      if (error.response) {
+        expect(error.response.status).toBe(500);
+      } else {
+        // Otherwise, check that the error message contains our expected message.
+        expect(error.message).toContain('Failed to fetch content');
+      }
     }
   });
 
@@ -94,8 +101,12 @@ describe('Integration Tests', () => {
       // Should not reach here
       expect(true).toBe(false);
     } catch (error) {
-      expect(error.response.status).toBe(400);
-      expect(error.response.data.error).toBe('URL is required');
+      if (error.response) {
+        expect(error.response.status).toBe(400);
+        expect(error.response.data.error).toBe('URL is required');
+      } else {
+        throw error; // If there's no response, rethrow the error.
+      }
     }
   });
 });

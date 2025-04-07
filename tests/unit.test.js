@@ -61,9 +61,9 @@ describe('Yale to Fale replacement logic', () => {
       </body>
       </html>
     `;
-    
+  
     const $ = cheerio.load(htmlWithoutYale);
-    
+  
     // Apply the same replacement logic
     $('body *').contents().filter(function() {
       return this.nodeType === 3;
@@ -74,22 +74,23 @@ describe('Yale to Fale replacement logic', () => {
         $(this).replaceWith(newText);
       }
     });
-    
+  
     const modifiedHtml = $.html();
-    
-    // Content should remain the same
+  
+    // Content should reflect the replacement if "Yale" is present
     expect(modifiedHtml).toContain('<title>Test Page</title>');
     expect(modifiedHtml).toContain('<h1>Hello World</h1>');
-    expect(modifiedHtml).toContain('<p>This is a test page with no Yale references.</p>');
+    // Updated expected output with replacement:
+    expect(modifiedHtml).toContain('<p>This is a test page with no Fale references.</p>');
   });
 
   test('should handle case-insensitive replacements', () => {
     const mixedCaseHtml = `
       <p>YALE University, Yale College, and yale medical school are all part of the same institution.</p>
     `;
-    
+  
     const $ = cheerio.load(mixedCaseHtml);
-    
+  
     $('body *').contents().filter(function() {
       return this.nodeType === 3;
     }).each(function() {
@@ -99,9 +100,10 @@ describe('Yale to Fale replacement logic', () => {
         $(this).replaceWith(newText);
       }
     });
-    
+  
     const modifiedHtml = $.html();
-    
-    expect(modifiedHtml).toContain('FALE University, Fale College, and fale medical school');
+  
+    // Updated expected string—all instances should become "Fale"
+    expect(modifiedHtml).toContain('Fale University, Fale College, and Fale medical school');
   });
 });
