@@ -3,6 +3,40 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const path = require('path');
 
+// Extract text replacement function for better testability
+function replaceYaleWithFale(text) {
+  return text.replace(/Yale/gi, 'Fale');
+}
+
+// Extract filter function for better testability
+function isTextNode(node) {
+  return node.nodeType === 3; // Text nodes only
+}
+
+// Extract HTML processing function for better testability
+function processHtml(html) {
+  const $ = cheerio.load(html);
+  
+  // Process text nodes in the body
+  $('body *').contents().filter(function() {
+    return isTextNode(this);
+  }).each(function() {
+    // Replace text content but not in URLs or attributes
+    const text = $(this).text();
+    const newText = replaceYaleWithFale(text);
+    if (text !== newText) {
+      $(this).replaceWith(newText);
+    }
+  });
+  
+  // Process title separately
+  const title = replaceYaleWithFale($('title').text());
+  $('title').text(title);
+  
+  return { html: $.html(), title };
+}
+
+// Create app
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -28,30 +62,14 @@ app.post('/fetch', async (req, res) => {
     // Fetch the content from the provided URL
     const response = await axios.get(url);
     const html = response.data;
-
-    // Use cheerio to parse HTML and selectively replace text content, not URLs
-    const $ = cheerio.load(html);
     
-    // Process text nodes in the body
-    $('body *').contents().filter(function() {
-      return this.nodeType === 3; // Text nodes only
-    }).each(function() {
-      // Replace text content but not in URLs or attributes
-      const text = $(this).text();
-      const newText = text.replace(/Yale/gi, 'Fale'); // Case-insensitive replacement
-      if (text !== newText) {
-        $(this).replaceWith(newText);
-      }
-    });
-    
-    // Process title separately
-    const title = $('title').text().replace(/Yale/gi, 'Fale'); // Case-insensitive replacement
-    $('title').text(title);
+    // Process the HTML
+    const processed = processHtml(html);
     
     return res.json({ 
       success: true, 
-      content: $.html(),
-      title: title,
+      content: processed.html,
+      title: processed.title,
       originalUrl: url
     });
   } catch (error) {
@@ -69,5 +87,10 @@ if (require.main === module) {
   });
 }
 
-// Export the app for testing
-module.exports = app;
+// Export the app and utility functions for testing
+module.exports = {
+  app,
+  replaceYaleWithFale,
+  isTextNode,
+  processHtml
+};

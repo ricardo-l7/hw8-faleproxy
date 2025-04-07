@@ -1,5 +1,6 @@
 const cheerio = require('cheerio');
 const { sampleHtmlWithYale } = require('./test-utils');
+const { replaceYaleWithFale, isTextNode, processHtml } = require('../app');
 
 describe('Yale to Fale replacement logic', () => {
   
@@ -139,5 +140,52 @@ describe('Yale to Fale replacement logic', () => {
     expect(modifiedHtml).toContain('<!-- Yale University -->');
     // Text content should be replaced
     expect(modifiedHtml).toContain('Fale University');
+  });
+});
+
+// Add tests for the extracted utility functions
+describe('Utility functions', () => {
+  test('replaceYaleWithFale should replace Yale with Fale case-insensitively', () => {
+    expect(replaceYaleWithFale('Yale University')).toBe('Fale University');
+    expect(replaceYaleWithFale('YALE UNIVERSITY')).toBe('Fale UNIVERSITY');
+    expect(replaceYaleWithFale('yale university')).toBe('Fale university');
+    expect(replaceYaleWithFale('Text with no matches')).toBe('Text with no matches');
+  });
+
+  test('isTextNode should identify text nodes correctly', () => {
+    expect(isTextNode({ nodeType: 3 })).toBe(true);
+    expect(isTextNode({ nodeType: 1 })).toBe(false);
+    expect(isTextNode({ nodeType: 8 })).toBe(false);
+  });
+
+  test('processHtml should replace Yale with Fale in HTML content', () => {
+    const result = processHtml(sampleHtmlWithYale);
+    
+    expect(result.title).toBe('Fale University Test Page');
+    expect(result.html).toContain('Welcome to Fale University');
+    expect(result.html).toContain('Fale University is a private Ivy League');
+    expect(result.html).toContain('https://www.yale.edu/about'); // URL should remain unchanged
+    expect(result.html).toContain('>About Fale<'); // Link text should be changed
+  });
+
+  test('processHtml should handle HTML without Yale references', () => {
+    const htmlWithoutYale = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Test Page</title>
+      </head>
+      <body>
+        <h1>Hello World</h1>
+        <p>This is a test page with no Yale references.</p>
+      </body>
+      </html>
+    `;
+    
+    const result = processHtml(htmlWithoutYale);
+    
+    expect(result.title).toBe('Test Page');
+    expect(result.html).toContain('<h1>Hello World</h1>');
+    expect(result.html).toContain('This is a test page with no Fale references');
   });
 });
