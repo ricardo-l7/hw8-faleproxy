@@ -21,9 +21,7 @@ describe('Integration Tests', () => {
     
     // Start the test server using the original app.js with an overridden PORT
     server = require('child_process').spawn('node', ['app.js'], {
-      env: { ...process.env, PORT: TEST_PORT.toString() },
-      detached: true,
-      stdio: 'ignore'
+      env: { ...process.env, PORT: TEST_PORT.toString() }
     });
     
     // Give the server time to start
