@@ -19,17 +19,16 @@ describe('Integration Tests', () => {
     // Allow connections to localhost (with optional port) and 127.0.0.1
     nock.enableNetConnect((host) => /^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host));
     
-    // Start the test server using the original app.js,
-    // and override the PORT via the environment variable
+    // Start the test server using the original app.js with an overridden PORT
     server = require('child_process').spawn('node', ['app.js'], {
       env: { ...process.env, PORT: TEST_PORT.toString() },
       detached: true,
       stdio: 'ignore'
     });
-
+    
     // Give the server time to start
     await new Promise(resolve => setTimeout(resolve, 2000));
-  }, 10000);  
+  }, 10000);
 
   afterAll(async () => {
     // Kill the test server and clean up
@@ -38,7 +37,7 @@ describe('Integration Tests', () => {
     }
     nock.cleanAll();
     nock.enableNetConnect();
-  });
+  });  
 
   test('Should replace Yale with Fale in fetched content', async () => {
     // Setup mock for example.com served by your mock server
