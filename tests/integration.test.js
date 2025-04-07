@@ -19,16 +19,14 @@ describe('Integration Tests', () => {
     // Allow connections to localhost (with optional port) and 127.0.0.1
     nock.enableNetConnect((host) => /^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host));
     
-    // Create a temporary test app file
-    await execAsync('cp app.js app.test.js');
-    await execAsync(`sed -i '' 's/const PORT = 3001/const PORT = ${TEST_PORT}/' app.test.js`);
-    
-    // Start the test server
-    server = require('child_process').spawn('node', ['app.test.js'], {
+    // Start the test server using the original app.js,
+    // and override the PORT via the environment variable
+    server = require('child_process').spawn('node', ['app.js'], {
+      env: { ...process.env, PORT: TEST_PORT.toString() },
       detached: true,
       stdio: 'ignore'
     });
-    
+
     // Give the server time to start
     await new Promise(resolve => setTimeout(resolve, 2000));
   }, 10000);  
@@ -38,7 +36,6 @@ describe('Integration Tests', () => {
     if (server && server.pid) {
       process.kill(-server.pid);
     }
-    await execAsync('rm app.test.js');
     nock.cleanAll();
     nock.enableNetConnect();
   });
