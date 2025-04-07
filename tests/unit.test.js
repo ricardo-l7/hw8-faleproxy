@@ -12,14 +12,14 @@ describe('Yale to Fale replacement logic', () => {
     }).each(function() {
       // Replace text content but not in URLs or attributes
       const text = $(this).text();
-      const newText = text.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
+      const newText = text.replace(/Yale/gi, 'Fale');
       if (text !== newText) {
         $(this).replaceWith(newText);
       }
     });
     
     // Process title separately
-    const title = $('title').text().replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
+    const title = $('title').text().replace(/Yale/gi, 'Fale');
     $('title').text(title);
     
     const modifiedHtml = $.html();
@@ -57,7 +57,7 @@ describe('Yale to Fale replacement logic', () => {
       </head>
       <body>
         <h1>Hello World</h1>
-        <p>This is a test page with no Yale references.</p>
+        <p>This is a test page with no Fale references.</p>
       </body>
       </html>
     `;
@@ -69,7 +69,7 @@ describe('Yale to Fale replacement logic', () => {
       return this.nodeType === 3;
     }).each(function() {
       const text = $(this).text();
-      const newText = text.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
+      const newText = text.replace(/Yale/gi, 'Fale');
       if (text !== newText) {
         $(this).replaceWith(newText);
       }
@@ -77,11 +77,10 @@ describe('Yale to Fale replacement logic', () => {
   
     const modifiedHtml = $.html();
   
-    // Content should reflect the replacement if "Yale" is present
+    // Content should remain unchanged since there are no "Yale" references
     expect(modifiedHtml).toContain('<title>Test Page</title>');
     expect(modifiedHtml).toContain('<h1>Hello World</h1>');
-    // Updated expected output with replacement:
-    expect(modifiedHtml).toContain('<p>This is a test page with no Fale references.</p>');
+    expect(modifiedHtml).toContain('This is a test page with no Fale references');
   });
 
   test('should handle case-insensitive replacements', () => {
@@ -103,7 +102,42 @@ describe('Yale to Fale replacement logic', () => {
   
     const modifiedHtml = $.html();
   
-    // Updated expected string—all instances should become "Fale"
+    // Should replace all case variants of "Yale" with "Fale"
     expect(modifiedHtml).toContain('Fale University, Fale College, and Fale medical school');
+  });
+
+  test('should handle non-text nodes', () => {
+    const htmlWithComment = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Test Page</title>
+      </head>
+      <body>
+        <!-- Yale University -->
+        <p>Yale University</p>
+      </body>
+      </html>
+    `;
+
+    const $ = cheerio.load(htmlWithComment);
+
+    // Process text nodes in the body
+    $('body *').contents().filter(function() {
+      return this.nodeType === 3; // Text nodes only
+    }).each(function() {
+      const text = $(this).text();
+      const newText = text.replace(/Yale/gi, 'Fale');
+      if (text !== newText) {
+        $(this).replaceWith(newText);
+      }
+    });
+
+    const modifiedHtml = $.html();
+
+    // Comment should remain unchanged
+    expect(modifiedHtml).toContain('<!-- Yale University -->');
+    // Text content should be replaced
+    expect(modifiedHtml).toContain('Fale University');
   });
 });

@@ -5,47 +5,67 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 const { sampleHtmlWithYale } = require('./test-utils');
 const nock = require('nock');
+const http = require('http');
+const app = require('../app'); // Import app directly
 
 // Set a different port for testing to avoid conflict with the main app
 const TEST_PORT = 3099;
-const MOCK_PORT = 3098; 
 let server;
+let originalConsoleError;
+let originalConsoleLog;
 
 describe('Integration Tests', () => {
-  // Modify the app to use a test port
+  // Start the server before tests
   beforeAll(async () => {
-    // Disable all net connections...
+    // Save original console methods
+    originalConsoleError = console.error;
+    originalConsoleLog = console.log;
+    // Mock console methods to suppress logs during tests
+    console.error = jest.fn();
+    console.log = jest.fn();
+
+    // Disable all net connections except localhost
     nock.disableNetConnect();
-    // Allow connections to localhost (with optional port) and 127.0.0.1
     nock.enableNetConnect((host) => /^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host));
     
-    // Start the test server using the original app.js with an overridden PORT
-    server = require('child_process').spawn('node', ['app.js'], {
-      env: { ...process.env, PORT: TEST_PORT.toString() }
+    // Create the server from our app directly instead of spawning a child process
+    server = http.createServer(app);
+    await new Promise(resolve => {
+      server.listen(TEST_PORT, () => {
+        console.log(`Test server started on port ${TEST_PORT}`);
+        resolve();
+      });
     });
     
-    // Give the server time to start
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Mock server setup for example.com
+    nock('http://example.com')
+      .persist()
+      .get('/')
+      .reply(200, sampleHtmlWithYale);
   }, 10000);
 
   afterAll(async () => {
-    // Kill the test server and clean up
-    if (server && server.pid) {
-      process.kill(-server.pid);
+    // Restore original console methods
+    console.error = originalConsoleError;
+    console.log = originalConsoleLog;
+
+    // Close the server when done
+    if (server && server.listening) {
+      await new Promise(resolve => server.close(resolve));
     }
     nock.cleanAll();
     nock.enableNetConnect();
   });  
 
+  afterEach(() => {
+    // Clear any lingering nock interceptors after each test
+    nock.cleanAll();
+  });
+
   test('Should replace Yale with Fale in fetched content', async () => {
-    // Setup mock for example.com served by your mock server
-    nock('http://localhost:' + MOCK_PORT)
-      .get('/')
-      .reply(200, sampleHtmlWithYale);
-    
-    // Make a request to our proxy app targeting the mock server
+    // Make a request to our proxy app targeting example.com
     const response = await axios.post(`http://localhost:${TEST_PORT}/fetch`, {
-      url: `http://localhost:${MOCK_PORT}/`
+      url: 'http://example.com/'
     });
     
     expect(response.status).toBe(200);
@@ -69,7 +89,7 @@ describe('Integration Tests', () => {
     
     // Verify link text is changed
     expect($('a').first().text()).toBe('About Fale');
-  }, 10000); // Increase timeout for this test
+  }, 10000);
 
   test('Should handle invalid URLs', async () => {
     try {
@@ -79,12 +99,8 @@ describe('Integration Tests', () => {
       // Should not reach here
       expect(true).toBe(false);
     } catch (error) {
-      // Accept either our expected error message or nock's error
-      if (error.response && error.response.data && error.response.data.error) {
-        expect(error.response.data.error).toMatch(/Failed to fetch content|Nock: Disallowed net connect/);
-      } else {
-        expect(error.message).toMatch(/Failed to fetch content|Nock: Disallowed net connect/);
-      }
+      expect(error.response.status).toBe(500);
+      expect(error.response.data.error).toContain('Failed to fetch content');
     }
   });
 
@@ -94,12 +110,8 @@ describe('Integration Tests', () => {
       // Should not reach here
       expect(true).toBe(false);
     } catch (error) {
-      if (error.response) {
-        expect(error.response.status).toBe(400);
-        expect(error.response.data.error).toBe('URL is required');
-      } else {
-        throw error; // If there's no response, rethrow the error.
-      }
+      expect(error.response.status).toBe(400);
+      expect(error.response.data.error).toBe('URL is required');
     }
   });
 });
