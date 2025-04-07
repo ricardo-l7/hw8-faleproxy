@@ -30,11 +30,11 @@ jobs:
       run: npm run test:ci
       
     - name: Upload coverage report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v3.1.2
       with:
         name: coverage-report
         path: coverage/
-        
+
   deploy:
     needs: test
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
