@@ -87,10 +87,8 @@ if (require.main === module) {
   });
 }
 
-// Export the app and utility functions for testing
-module.exports = {
-  app,
-  replaceYaleWithFale,
-  isTextNode,
-  processHtml
-};
+// Export both the app for Vercel and the utility functions for testing
+module.exports = app;
+module.exports.replaceYaleWithFale = replaceYaleWithFale;
+module.exports.isTextNode = isTextNode;
+module.exports.processHtml = processHtml;

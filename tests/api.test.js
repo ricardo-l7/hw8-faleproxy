@@ -2,7 +2,7 @@ const request = require('supertest');
 const nock = require('nock');
 const path = require('path');
 const { sampleHtmlWithYale } = require('./test-utils');
-const { app } = require('../app');
+const app = require('../app');
 
 describe('API Endpoints', () => {
   let originalConsoleError;

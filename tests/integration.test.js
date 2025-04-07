@@ -6,7 +6,7 @@ const execAsync = promisify(exec);
 const { sampleHtmlWithYale } = require('./test-utils');
 const nock = require('nock');
 const http = require('http');
-const { app } = require('../app'); // Import app directly
+const app = require('../app'); // Import app directly
 
 // Set a different port for testing to avoid conflict with the main app
 const TEST_PORT = 3099;
